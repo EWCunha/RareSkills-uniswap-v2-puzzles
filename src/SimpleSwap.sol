@@ -13,7 +13,11 @@ contract SimpleSwap {
      *  from USDC/WETH pool.
      *
      */
-    function performSwap(address pool, address weth, address usdc) public {
+    function performSwap(
+        address pool,
+        address weth,
+        address /* usdc */
+    ) public {
         /**
          *     swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data);
          *
@@ -24,5 +28,27 @@ contract SimpleSwap {
          */
 
         // your code start here
+        uint256 uniswap_v2_fee = 3_000;
+        uint256 precision = 1_000_000;
+
+        IUniswapV2Pair pair = IUniswapV2Pair(pool);
+        uint256 wethBalance = IERC20(weth).balanceOf(address(this));
+        IERC20(weth).transfer(pool, wethBalance);
+
+        (uint112 reserve0, uint112 reserve1, ) = pair.getReserves();
+        address token0 = pair.token0();
+        (uint112 reserveIn, uint112 reserveOut) = token0 == weth
+            ? (reserve0, reserve1)
+            : (reserve1, reserve0);
+        uint256 feeTerm = precision - uniswap_v2_fee;
+
+        uint256 amountOut = ((wethBalance * feeTerm * reserveOut)) /
+            (reserveIn * precision + (wethBalance * feeTerm));
+
+        (uint256 amount0Out, uint256 amount1Out) = token0 == weth
+            ? (uint256(0), amountOut)
+            : (amountOut, uint256(0));
+
+        pair.swap(amount0Out, amount1Out, address(this), "");
     }
 }

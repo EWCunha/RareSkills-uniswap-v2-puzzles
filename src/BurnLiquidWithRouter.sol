@@ -18,8 +18,25 @@ contract BurnLiquidWithRouter {
         router = _router;
     }
 
-    function burnLiquidityWithRouter(address pool, address usdc, address weth, uint256 deadline) public {
+    function burnLiquidityWithRouter(
+        address pool,
+        address usdc,
+        address weth,
+        uint256 deadline
+    ) public {
         // your code start here
+        uint256 lpBalance = IERC20(pool).balanceOf(address(this));
+        IERC20(pool).approve(router, lpBalance);
+
+        IUniswapV2Router(router).removeLiquidity(
+            usdc,
+            weth,
+            lpBalance,
+            0,
+            0,
+            address(this),
+            deadline
+        );
     }
 }
 
