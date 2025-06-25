@@ -20,7 +20,13 @@ contract MyMevBot {
     IUniswapV2Router public immutable router;
     bool public flashLoaned;
 
-    constructor(address _flashLenderPool, address _weth, address _usdc, address _usdt, address _router) {
+    constructor(
+        address _flashLenderPool,
+        address _weth,
+        address _usdc,
+        address _usdt,
+        address _router
+    ) {
         flashLenderPool = IUniswapV3Pool(_flashLenderPool);
         weth = IERC20(_weth);
         usdc = IERC20(_usdc);
@@ -30,18 +36,77 @@ contract MyMevBot {
 
     function performArbitrage() public {
         // your code here
+        flashLenderPool.flash(address(this), 1000e6, 0, "");
+
+        require(usdc.balanceOf(address(this)) > 0, "No USDC balance");
     }
 
-    function uniswapV3FlashCallback(uint256 _fee0, uint256, bytes calldata data) external {
+    function uniswapV3FlashCallback(
+        uint256 _fee0,
+        uint256,
+        bytes calldata /* data */
+    ) external {
         callMeCallMe();
 
         // your code start here
+        address[] memory path = new address[](2);
+
+        // USDC -> WETH
+        path[0] = address(usdc);
+        path[1] = address(weth);
+
+        uint256 balance = usdc.balanceOf(address(this));
+        uint256 usdcToReturn = balance + _fee0;
+        usdc.approve(address(router), balance);
+
+        IUniswapV2Router(router).swapExactTokensForTokens(
+            balance,
+            0,
+            path,
+            address(this),
+            block.timestamp
+        );
+
+        // WETH -> USDT
+        path[0] = address(weth);
+        path[1] = address(usdt);
+
+        balance = weth.balanceOf(address(this));
+        weth.approve(address(router), balance);
+
+        IUniswapV2Router(router).swapExactTokensForTokens(
+            balance,
+            0,
+            path,
+            address(this),
+            block.timestamp
+        );
+
+        // USDT -> USDC
+        path[0] = address(usdt);
+        path[1] = address(usdc);
+
+        balance = usdt.balanceOf(address(this));
+        usdt.approve(address(router), balance);
+
+        IUniswapV2Router(router).swapExactTokensForTokens(
+            balance,
+            0,
+            path,
+            address(this),
+            block.timestamp
+        );
+
+        usdc.transfer(address(flashLenderPool), usdcToReturn);
     }
 
     function callMeCallMe() private {
         uint256 usdcBal = usdc.balanceOf(address(this));
         require(msg.sender == address(flashLenderPool), "not callback");
-        require(flashLoaned = usdcBal >= 1000e6, "FlashLoan less than 1,000 USDC.");
+        require(
+            flashLoaned = usdcBal >= 1000e6,
+            "FlashLoan less than 1,000 USDC."
+        );
     }
 }
 
@@ -52,7 +117,12 @@ interface IUniswapV3Pool {
      * amount1: the amount of WETH to borrow.
      * data: any data to be passed through to the callback.
      */
-    function flash(address recipient, uint256 amount0, uint256 amount1, bytes calldata data) external;
+    function flash(
+        address recipient,
+        uint256 amount0,
+        uint256 amount1,
+        bytes calldata data
+    ) external;
 }
 
 interface IUniswapV2Router {

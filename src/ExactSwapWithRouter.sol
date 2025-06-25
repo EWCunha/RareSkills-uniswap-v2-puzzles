@@ -17,8 +17,16 @@ contract ExactSwapWithRouter {
         router = _router;
     }
 
-    function performExactSwapWithRouter(address weth, address usdc, uint256 deadline) public {
+    function performExactSwapWithRouter(
+        address weth,
+        address usdc,
+        uint256 deadline
+    ) public {
         // your code start here
+        uint256 usdcWantedAmount = 1337e6;
+
+        uint256 uniswap_v2_fee = 3_000;
+        uint256 precision = 1_000_000;
     }
 }
 

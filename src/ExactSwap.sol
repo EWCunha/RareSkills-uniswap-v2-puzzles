@@ -13,7 +13,11 @@ contract ExactSwap {
      *  from USDC/WETH pool.
      *
      */
-    function performExactSwap(address pool, address weth, address usdc) public {
+    function performExactSwap(
+        address pool,
+        address weth,
+        address /* usdc */
+    ) public {
         /**
          *     swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data);
          *
@@ -24,5 +28,42 @@ contract ExactSwap {
          */
 
         // your code start here
+        uint256 usdcWantedAmount = 1337e6;
+
+        uint256 uniswap_v2_fee = 3_000;
+        uint256 precision = 1_000_000;
+
+        IUniswapV2Pair pair = IUniswapV2Pair(pool);
+
+        (uint112 reserve0, uint112 reserve1, ) = pair.getReserves();
+        uint256 amount0Out;
+        uint256 amount1Out;
+        uint256 amountIn;
+        {
+            uint112 reserveIn;
+            uint112 reserveOut;
+            if (pair.token0() == weth) {
+                reserveIn = reserve0;
+                reserveOut = reserve1;
+                amount0Out = 0;
+                amount1Out = usdcWantedAmount;
+            } else {
+                reserveIn = reserve1;
+                reserveOut = reserve0;
+                amount0Out = usdcWantedAmount;
+                amount1Out = 0;
+            }
+
+            uint256 numerator = reserveIn * usdcWantedAmount * precision;
+            uint256 denominator = (reserveOut - usdcWantedAmount) *
+                (precision - uniswap_v2_fee);
+            amountIn = numerator / denominator;
+            if (amountIn * denominator != numerator) {
+                amountIn = amountIn + 1;
+            }
+        }
+
+        IERC20(weth).transfer(pool, amountIn);
+        pair.swap(amount0Out, amount1Out, address(this), "");
     }
 }
