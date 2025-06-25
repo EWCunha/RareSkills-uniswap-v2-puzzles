@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import {Test, console2} from "forge-std/Test.sol";
 import {Sync, Skim} from "../src/SyncAndSkim.sol";
 import "../src/interfaces/IUniswapV2Pair.sol";
+import {IERC20} from "../src/interfaces/IERC20.sol";
 
 contract SyncAndSkimTest is Test {
     Sync public sync;
@@ -42,12 +43,13 @@ contract SyncAndSkimTest is Test {
     function test_PerformSkim() public {
         skim = new Skim();
 
-        // Deal 0xBeeb with some tokens
-        deal(ampl, address(0xBeeb), 2500e9);
-        deal(weth, address(0xBeeb), 100 ether);
+        address holder = 0xCb2286d9471cc185281c4f763d34A962ED212962; // SushiSwap (has a lot of AMPL)
+
+        // Deal holder with some tokens
+        deal(weth, holder, 100 ether);
 
         // simulate positive rebase
-        vm.startPrank(address(0xBeeb));
+        vm.startPrank(holder);
         IUniswapV2Pair(weth).transfer(pool, 100 ether);
         IUniswapV2Pair(ampl).transfer(pool, 2500e9);
         vm.stopPrank();

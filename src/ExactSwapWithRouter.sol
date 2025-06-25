@@ -25,8 +25,29 @@ contract ExactSwapWithRouter {
         // your code start here
         uint256 usdcWantedAmount = 1337e6;
 
-        uint256 uniswap_v2_fee = 3_000;
-        uint256 precision = 1_000_000;
+        // Create the path for the swap: WETH -> USDC
+        address[] memory path = new address[](2);
+        path[0] = weth;
+        path[1] = usdc;
+
+        // Use getAmountsIn to calculate how much WETH we need to get exactly 1337 USDC
+        uint256[] memory amountsIn = IUniswapV2Router(router).getAmountsIn(
+            usdcWantedAmount,
+            path
+        );
+        uint256 wethAmountIn = amountsIn[0];
+
+        // Approve the router to spend our WETH
+        IERC20(weth).approve(router, wethAmountIn);
+
+        // Perform the swap
+        IUniswapV2Router(router).swapExactTokensForTokens(
+            wethAmountIn,
+            usdcWantedAmount, // Set minimum output to exactly what we want
+            path,
+            address(this),
+            deadline
+        );
     }
 }
 
@@ -45,4 +66,13 @@ interface IUniswapV2Router {
         address to,
         uint256 deadline
     ) external returns (uint256[] memory amounts);
+
+    /**
+     *     amountOut: the exact amount of output tokens we want to receive.
+     *     path: an array of token addresses. In our case, WETH and USDC.
+     */
+    function getAmountsIn(
+        uint256 amountOut,
+        address[] calldata path
+    ) external view returns (uint256[] memory amounts);
 }
